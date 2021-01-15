@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using System.Threading.Tasks;
+using Microsoft.Win32;
 
 namespace ListTypeLibs
 {
@@ -33,31 +34,32 @@ namespace ListTypeLibs
 
         }
 
-        private static void PrintClsIds()
+        private static void PrintClsIds(bool is32bit = false)
         {
-
-            foreach (var name in RegLib.GetSubKeyNames(@"HKCR\clsid"))
+            var view = is32bit ? RegistryView.Registry32 : RegistryView.Registry64;
+            foreach (var name in RegLib.GetSubKeyNames(@"HKCR\clsid", view))
             {
                 Console.WriteLine($"{name}");
-                foreach (var k2 in RegLib.GetSubKeyNames(name))
+                foreach (var k2 in RegLib.GetSubKeyNames(name, view))
                 {
                     if (k2.EndsWith("InprocServer32", StringComparison.InvariantCultureIgnoreCase))
                     {
-                        var dll = RegLib.GetDefaultValue(k2);
+                        var dll = RegLib.GetDefaultValue(k2, view);
                         Console.WriteLine($"{k2} {dll}");
                     }
                 }
             }
         }
 
-        private static void PrintTypeLibs()
+        private static void PrintTypeLibs(bool is32bit = false)
         {
             var versionPattern = @"\\[a-z0-9]{1,3}\.[a-z0-9]{1,3}$";
 
-            foreach (var name in RegLib.GetSubKeyNames(@"HKCR\typelib"))
+            var view = is32bit ? RegistryView.Registry32 : RegistryView.Registry64;
+            foreach (var name in RegLib.GetSubKeyNames(@"HKCR\typelib", view))
             {
                 Console.WriteLine($"{name}");
-                foreach (var k2 in RegLib.GetSubKeyNames(name))
+                foreach (var k2 in RegLib.GetSubKeyNames(name, view))
                 {
                     var match = Regex.Match(k2, versionPattern, RegexOptions.IgnoreCase);
                     if (match.Success)
