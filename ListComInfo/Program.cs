@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
-using System.Threading.Tasks;
 using Microsoft.Win32;
 
-namespace ListTypeLibs
+namespace ListComInfo
 {
     class Program
     {
@@ -16,14 +12,18 @@ namespace ListTypeLibs
         {
             try
             {
-                if (args.Length == 0)
+                var opts = args.Where(x => x[0] == '-');
+                var allOpts = args.SelectMany(x => x).ToHashSet();
+                var is32Bit = allOpts.Contains('3');
+                var help = allOpts.Contains('h') || allOpts.Contains('?') || (args.Any() && args[0] == "--help");
+
+                if (help)
                 {
-                    PrintTypeLibs();
+                    PrintUsageAndExit();
                 }
-                else if (args.Length == 1 && args[0] == "-c")
-                {
-                    PrintClsIds();
-                }
+
+                PrintTypeLibs(is32Bit);
+                PrintClsIds(is32Bit);
             }
             catch (Exception ex)
             {
@@ -32,6 +32,16 @@ namespace ListTypeLibs
                 Console.Error.WriteLine($"{progname} Error: {ex.Message}");
             }
 
+        }
+
+        private static void PrintUsageAndExit()
+        {
+            Console.Error.WriteLine("Usage:");
+            Console.Error.WriteLine("    listcominfo");
+            Console.Error.WriteLine("       lists the 64 bit COM entries in the registry.");
+            Console.Error.WriteLine();
+            Console.Error.WriteLine("    listcominfo -3");
+            Console.Error.WriteLine("       lists the 32 bit COM entries in the registry.");
         }
 
         private static void PrintClsIds(bool is32bit = false)
@@ -65,12 +75,12 @@ namespace ListTypeLibs
                     if (match.Success)
                     {
                         Console.WriteLine($"    {k2}");
-                        foreach (var k3 in RegLib.GetSubKeyNames(k2))
+                        foreach (var k3 in RegLib.GetSubKeyNames(k2, view))
                         {
                             var flagsStr = "";
                             if (k3.EndsWith("flags", StringComparison.OrdinalIgnoreCase))
                             {
-                                flagsStr = $":{RegLib.GetDefaultValue(k3)}";
+                                flagsStr = $":{RegLib.GetDefaultValue(k3, view)}";
                                 Console.WriteLine($"        {k3}{flagsStr}");
                             }
                             else
@@ -82,7 +92,7 @@ namespace ListTypeLibs
                                     foreach (var platform in RegLib.GetSubKeyNames(k3))
                                     {
                                         Console.WriteLine($"            platform:{RegLib.GetLastSegment(platform)}");
-                                        foreach ((string key, string value) in RegLib.GetValues(platform))
+                                        foreach ((string key, string value) in RegLib.GetValues(platform, view))
                                         {
                                             Console.WriteLine($"                {key} {value}");
                                         }
